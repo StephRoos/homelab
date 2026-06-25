@@ -1,0 +1,88 @@
+# ============================================================================
+# Ignorer les fichiers sensibles et temporaires
+# ============================================================================
+
+# Environnement (contient des mots de passe et clés secrètes)
+.env
+*.env
+!immich.env
+
+# Configuration Docker sensible
+configs/docker/.env
+configs/docker/*-credentials*
+configs/docker/*-secrets*
+
+# Logs
+*.log
+logs/
+
+# Cache
+.cache/
+*.cache
+
+# Temp
+.tmp/
+*~/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OSX
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~/
+.tmp/
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Node
+node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Docker
+.docker/
+
+# Git
+.git/
+
+# Local history
+.history/
+
+# ============================================================================
+# EXCEPTIONS (fichiers à versionner)
+# ============================================================================
+
+# Garder les fichiers de configuration non sensibles
+!configs/docker/immich.yml
+!configs/docker/daemon.json
+!configs/docker/cloudflared-config.yml
+!configs/docker/coolify.yml
+!configs/docker/nextcloud-aio.yml
+!configs/docker/uptime-kuma.yml
+
+# Garder les templates d'environnement
+!configs/docker/immich.env
+
+# Garder la documentation
+!Documents/
+
+# Garder les scripts
+!scripts/
+
+# Garder les prompts
+!prompts/
+
+# Garder AGENTS.md
+!AGENTS.md

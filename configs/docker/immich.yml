@@ -1,0 +1,294 @@
+# Immich - Self-Hosted Photo and Video Backup Solution
+# Configuration pour Homelab : UM880 Plus (Ubuntu 24.04) + NAS UGREEN (ARM64)
+# Version : release (latest, compatibilité ARM64 vérifiée)
+# Documentation : https://immich.app/docs
+# 
+# ⚠️ ARCHITECTURE :
+#   - Base de données : PostgreSQL (conteneur dédié)
+#   - Cache : Redis (conteneur dédié)
+#   - Backend : immich-server (Node.js)
+#   - Frontend : immich-web (Nginx)
+#   - Machine Learning : immich-machine-learning (optionnel, désactivé par défaut pour ARM64)
+#
+# 💾 STOCKAGE :
+#   - Photos/Vidéos : /mnt/nas/immich/library (sur NAS UGREEN)
+#   - Config : /mnt/nas/immich/config (sur NAS UGREEN)
+#   - DB : Volumes Docker locaux (sauvegardés automatiquement)
+
+services:
+  # ============================================================================
+  # Base de données PostgreSQL
+  # ============================================================================
+  immich-postgres:
+    image: tensorchord/pgvecto-rs:pg14-v0.2.0
+    container_name: immich-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: immich
+      POSTGRES_PASSWORD: ${IMMICH_DB_PASSWORD:-changer_mot_de_passe}
+      POSTGRES_DB: immich
+    volumes:
+      - immich-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U immich -d immich"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - immich-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+
+  # ============================================================================
+  # Cache Redis
+  # ============================================================================
+  immich-redis:
+    image: redis:7.2-alpine
+    container_name: immich-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - immich-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - immich-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+
+  # ============================================================================
+  # Backend Immich (Server)
+  # ============================================================================
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:release
+    container_name: immich-server
+    restart: unless-stopped
+    depends_on:
+      immich-postgres:
+        condition: service_started
+      immich-redis:
+        condition: service_started
+    environment:
+      # ⚠️ NE PAS CHANGER ces variables (requises par Immich)
+      DB_HOSTNAME: immich-postgres
+      DB_PORT: 5432
+      DB_USERNAME: immich
+      DB_PASSWORD: ${IMMICH_DB_PASSWORD:-changer_mot_de_passe}
+      DB_DATABASE_NAME: immich
+      
+      # Configuration Redis
+      REDIS_HOSTNAME: immich-redis
+      REDIS_PORT: 6379
+      
+      # ⚠️ CRITICAL: Let server use default binding (works with release tag)
+      NODE_ENV: production
+      
+      # ⚠️ IMPORTANT : Désactiver Machine Learning pour ARM64 (pas de GPU)
+      DISABLE_MACHINE_LEARNING: "true"
+      
+      # URL publique (pour les emails et liens partagés)
+      PUBLIC_SERVER_URL: https://photos.stephaneroos.com
+      
+      # Clé secrète (générer avec : openssl rand -hex 32)
+      IMMICH_SECRET: ${IMMICH_SECRET:-changer_cle_secrete}
+      
+      # Configuration du stockage
+      UPLOAD_LOCATION: /usr/src/app/upload
+      
+      # Timezone
+      TZ: Europe/Paris
+    volumes:
+      # Stockage des uploads (photos/vidéos temporaires avant traitement)
+      - /mnt/nas/immich/upload:/usr/src/app/upload
+      # Library (photos/vidéos stockées)
+      - /mnt/nas/immich/library:/usr/src/app/assets
+      # Configuration
+      - /mnt/nas/immich/config/server:/config
+    networks:
+      - immich-network
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+          cpus: '2.0'
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:2283/api/server/ping || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ============================================================================
+  # Frontend Immich (Web UI)
+  # ============================================================================
+  immich-web:
+    image: ghcr.io/immich-app/immich-web:release
+    container_name: immich-web
+    restart: unless-stopped
+    depends_on:
+      immich-server:
+        condition: service_started
+    environment:
+      # URL du backend (must match server PORT)
+      IMMICH_SERVER_URL: http://immich-server:2283
+      
+      # Timezone
+      TZ: Europe/Paris
+    ports:
+      # ⚠️ Port local uniquement (Cloudflare Tunnel pour l'externe)
+      # immich-web listens on port 3000 by default
+      - "127.0.0.1:2284:3000"
+    volumes:
+      # Configuration
+      - /mnt/nas/immich/config/web:/config
+    networks:
+      - immich-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+
+  # ============================================================================
+  # Machine Learning (Optionnel - Désactivé par défaut pour ARM64)
+  # ============================================================================
+  # immich-machine-learning:
+  #   image: ghcr.io/immich-app/immich-machine-learning:v1.105.0
+  #   container_name: immich-machine-learning
+  #   restart: unless-stopped
+  #   depends_on:
+  #     immich-server:
+  #       condition: service_healthy
+  #   environment:
+  #     IMMICH_SERVER_URL: http://immich-server:3001
+  #     MODEL_CACHE_PATH: /cache
+  #   volumes:
+  #     - /mnt/nas/immich/config/ml:/cache
+  #   networks:
+  #     - immich-network
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 4G
+  #         cpus: '2.0'
+  #   # ⚠️ Nécessite un GPU pour être utile
+  #   # Pour ARM64 sans GPU, laisser désactivé
+
+# ============================================================================
+# Volumes Docker
+# ============================================================================
+volumes:
+  immich-postgres-data:
+    driver: local
+    name: immich-postgres-data
+  immich-redis-data:
+    driver: local
+    name: immich-redis-data
+
+# ============================================================================
+# Réseau Docker dédié
+# ============================================================================
+networks:
+  immich-network:
+    driver: bridge
+    name: immich-network
+
+# ============================================================================
+# CONFIGURATION CLOUDFLARE TUNNEL
+# ============================================================================
+# 
+# Pour exposer Immich via Cloudflare Tunnel, exécuter :
+#   cloudflared tunnel route docker immich 2284
+#
+# Cela permettra d'accéder à Immich via : https://photos.stephaneroos.com
+#
+# Prérequis :
+# 1. Le tunnel Cloudflare doit être installé et actif sur UM880
+# 2. Le domaine photos.stephaneroos.com doit pointer vers le tunnel (CNAME)
+# 3. Les records DNS doivent être configurés dans Cloudflare Zero Trust
+#
+
+# ============================================================================
+# COMMANDES UTILES
+# ============================================================================
+#
+# # Démarrer/Arrêter
+# docker-compose -f immich.yml up -d
+# docker-compose -f immich.yml down
+#
+# # Voir les logs
+# docker-compose -f immich.yml logs -f
+# docker logs -f immich-server
+# docker logs -f immich-web
+#
+# # Mettre à jour
+# docker-compose -f immich.yml pull
+# docker-compose -f immich.yml up -d
+#
+# # Vérifier l'état
+# docker ps | grep immich
+# docker-compose -f immich.yml ps
+#
+# # Sauvegarder les données
+# docker exec immich-postgres pg_dump -U immich -d immich > /mnt/nas/backups/immich-db-$(date +%Y%m%d).sql
+# tar -czvf /mnt/nas/backups/immich-config-$(date +%Y%m%d).tar.gz /mnt/nas/immich/
+#
+# # Restaurer les données
+# cat /mnt/nas/backups/immich-db-$(date +%Y%m%d).sql | docker exec -i immich-postgres psql -U immich -d immich
+# tar -xzvf /mnt/nas/backups/immich-config-$(date +%Y%m%d).tar.gz -C /
+#
+
+# ============================================================================
+# NOTES IMPORTANTES
+# ============================================================================
+#
+# 1. **Premier démarrage** :
+#    - La première initialisation peut prendre 2-3 minutes
+#    - L'interface web sera accessible sur : http://192.168.129.10:2284
+#    - Ou via Cloudflare Tunnel : https://photos.stephaneroos.com
+#
+# 2. **Création du premier utilisateur** :
+#    - Aller sur https://photos.stephaneroos.com
+#    - Suivre l'assistant de configuration
+#    - Créer un compte administrateur
+#
+# 3. **Compatibilité ARM64** :
+#    - Toutes les images Immich sont compatibles ARM64
+#    - Machine Learning est désactivé (pas de GPU sur NAS ARM64)
+#    - Les fonctionnalités de classification automatique seront limitées
+#
+# 4. **Stockage** :
+#    - Les photos/vidéos sont stockées directement dans /mnt/nas/immich/library
+#    - Aucune donnée dans les volumes Docker (sauf DB et cache)
+#    - Sauvegarder régulièrement /mnt/nas/immich/ vers le NAS
+#
+# 5. **Sécurité** :
+#    - Toujours utiliser HTTPS via Cloudflare
+#    - Changer les mots de passe par défaut (DB_PASSWORD, IMMICH_SECRET)
+#    - Configurer un .env file pour ne pas exposer les secrets
+#
+# 6. **Performances** :
+#    - Allouer au moins 4GB de RAM au total pour tous les conteneurs
+#    - Le conteneur server est le plus gourmand (3GB suggérés)
+#    - Pour >10k photos, considérer d'augmenter la RAM
+
+# ============================================================================
+# ENVIRONNEMENT RECOMMANDÉ (fichier .env)
+# ============================================================================
+#
+# Créer un fichier .env dans configs/docker/ avec :
+#
+# IMMICH_DB_PASSWORD=ton_mot_de_passe_postgres_securise
+# IMMICH_SECRET=ton_cle_secrete_generée_avec_openssl
+#
+# Puis lancer avec :
+# docker-compose -f immich.yml --env-file .env up -d
