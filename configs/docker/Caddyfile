@@ -1,0 +1,89 @@
+# ============================================================================
+# Caddyfile - Configuration stephaneroos.com
+# ============================================================================
+# Reverse proxy avec SSL automatique (Let's Encrypt)
+# ============================================================================
+
+{
+    # Email pour notifications Let's Encrypt
+    email steph@stephaneroos.com
+
+    # Global options
+    # auto_https est activé par défaut
+    log {
+        output file /var/log/caddy/access.log
+        format console
+    }
+}
+
+# ============================================================================
+# DOMAINE PRINCIPAL
+# ============================================================================
+
+# Redirect www → root
+www.stephaneroos.com {
+    redir https://stephaneroos.com{uri} permanent
+}
+
+# Page d'accueil (redirection vers portail)
+stephaneroos.com {
+    # Pour l'instant, redirect vers home
+    # Plus tard: page de présentation personnelle
+    redir https://home.stephaneroos.com permanent
+}
+
+# ============================================================================
+# SERVICES PERSONNELS
+# ============================================================================
+
+# Nextcloud Personal (temporairement désactivé)
+cloud.stephaneroos.com {
+    reverse_proxy localhost:8082
+}
+
+# Photos (Nextcloud Photos / Immich)
+photos.stephaneroos.com {
+    reverse_proxy localhost:8080 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+# Portail (Dashy - à déployer)
+home.stephaneroos.com {
+    reverse_proxy localhost:4000
+}
+
+# Git (Forgejo - à migrer depuis git.anthemion.dev)
+git.stephaneroos.com {
+    reverse_proxy localhost:3000 {
+        # Headers pour Forgejo/SSH
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+# SecondBrain (à définir - Obsidian Sync ?)
+# brain.stephaneroos.com {
+#     reverse_proxy localhost:XXXX
+# }
+
+# ============================================================================
+# SOUS-DOMAINES GÉNÉRIQUES (pour futurs services)
+# ============================================================================
+# Pattern pour ajouter facilement des services :
+#
+# nom.stephaneroos.com {
+#     reverse_proxy localhost:PORT
+# }
+
+# ============================================================================
+# WILDCARD (optionnel - pour développement)
+# ============================================================================
+# *.dev.stephaneroos.com {
+#     reverse_proxy localhost:8080 {
+#         header_up Host {host}
+#     }
+# }

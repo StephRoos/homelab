@@ -1,0 +1,136 @@
+version: '3.8'
+
+# ============================================================================
+# CADDY - Reverse Proxy pour stephaneroos.com
+# ============================================================================
+
+services:
+  caddy:
+    image: caddy:latest
+    container_name: caddy
+    restart: unless-stopped
+
+    # Mode réseau hôte pour accéder à localhost
+    network_mode: host
+
+    # Volumes
+    volumes:
+      # Configuration Caddy
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+
+      # Données persistantes (SSL certificates)
+      - caddy_data:/data
+      - caddy_config:/config
+
+      # Logs (optionnel)
+      - caddy_logs:/var/log/caddy
+
+    # Environment
+    environment:
+      - TZ=Europe/Paris
+
+      # Email pour Let's Encrypt (renewal notifications)
+      - ACME_AGREEMENT=true
+      - EMAIL=steph@stephaneroos.com
+
+    # Limites de ressources
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+
+    # Healthcheck
+    healthcheck:
+      test: ["CMD", "caddy", "version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+    # Options de sécurité
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  caddy_data:
+    driver: local
+    name: caddy_data
+  caddy_config:
+    driver: local
+    name: caddy_config
+  caddy_logs:
+    driver: local
+    name: caddy_logs
+
+# ============================================================================
+# CADDYFILE
+# ============================================================================
+# Le Caddyfile doit être créé dans le même dossier :
+#
+# {
+#     email steph@stephaneroos.com
+# }
+#
+# # Redirect www → root
+# www.stephaneroos.com {
+#     redir https://stephaneroos.com{uri}
+# }
+#
+# # Nextcloud Personal
+# cloud.stephaneroos.com {
+#     reverse_proxy localhost:8081
+# }
+#
+# # Photos
+# photos.stephaneroos.com {
+#     reverse_proxy localhost:8080
+# }
+#
+# # Portail (Dashy)
+# home.stephaneroos.com {
+#     reverse_proxy localhost:4000
+# }
+#
+# # Git (Forgejo) - à migrer
+# git.stephaneroos.com {
+#     reverse_proxy localhost:3000
+# }
+#
+# # SecondBrain - à définir
+# brain.stephaneroos.com {
+#     reverse_proxy localhost:XXXX
+# }
+#
+# stephaneroos.com {
+#     # Page d'accueil / redirection
+#     redir https://home.stephaneroos.com
+# }
+
+# ============================================================================
+# COMMANDES UTILES
+# ============================================================================
+#
+# # Démarrer
+# docker-compose -f caddy.yml up -d
+#
+# # Arrêter
+# docker-compose -f caddy.yml down
+#
+# # Recharger la configuration (sans downtime)
+# docker exec caddy caddy reload --config /etc/caddy/Caddyfile
+#
+# # Voir les logs
+# docker logs -f caddy
+#
+# # Vérifier les certificats SSL
+# docker exec caddy caddy list-certificates
+#
+# # Renouveler manuellement (généralement automatique)
+# docker exec caddy caddy reconcile
+# ============================================================================
