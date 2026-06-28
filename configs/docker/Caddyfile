@@ -21,47 +21,44 @@
 # ============================================================================
 
 # Redirect www → root
-www.stephaneroos.com {
+http://www.stephaneroos.com {
     redir https://stephaneroos.com{uri} permanent
 }
 
-# Page d'accueil (redirection vers portail)
-stephaneroos.com {
-    # Pour l'instant, redirect vers home
-    # Plus tard: page de présentation personnelle
-    redir https://home.stephaneroos.com permanent
+# Root → active service (Dashy/home not deployed yet)
+http://stephaneroos.com {
+    redir https://photos.stephaneroos.com permanent
 }
 
 # ============================================================================
 # SERVICES PERSONNELS
 # ============================================================================
 
-# Nextcloud Personal (temporairement désactivé)
-cloud.stephaneroos.com {
-    reverse_proxy localhost:8082
-}
-
-# Photos (Nextcloud Photos / Immich)
-photos.stephaneroos.com {
-    reverse_proxy localhost:8080 {
+# Photos (Immich, immich-web published on host :2284)
+http://photos.stephaneroos.com {
+    reverse_proxy localhost:2284 {
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote}
-        header_up X-Forwarded-Proto {scheme}
     }
 }
 
-# Portail (Dashy - à déployer)
-home.stephaneroos.com {
-    reverse_proxy localhost:4000
-}
+# --- Disabled: backing service not ready ------------------------------------
+# Nextcloud Personal: cloud-stephaneroos-proxy is in a crash-loop
+# (nginx: unknown "nginx_proxy" variable), ports 8081/11001 serve nothing.
+# http://cloud.stephaneroos.com {
+#     reverse_proxy localhost:11001
+# }
 
-# Git (Forgejo - à migrer depuis git.anthemion.dev)
-git.stephaneroos.com {
-    reverse_proxy localhost:3000 {
-        # Headers pour Forgejo/SSH
+# Dashy (home portal): not deployed yet (host :4000 empty).
+# http://home.stephaneroos.com {
+#     reverse_proxy localhost:4000
+# }
+
+# Git (Forgejo, published on host :32768)
+http://git.stephaneroos.com {
+    reverse_proxy localhost:32768 {
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote}
-        header_up X-Forwarded-Proto {scheme}
     }
 }
 
