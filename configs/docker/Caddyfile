@@ -20,15 +20,17 @@
 # DOMAINE PRINCIPAL
 # ============================================================================
 
-# Redirect www → root
-http://www.stephaneroos.com {
-    redir https://stephaneroos.com{uri} permanent
-}
+# NOTE: stephaneroos.com (apex) and www are NOT served by Caddy — they are
+# CNAME'd to Obsidian Publish (publish-main.obsidian.md). Do not add them to
+# the tunnel. Only the subdomains (git, photos, ...) go through Caddy.
 
-# Root → active service (Dashy/home not deployed yet)
-http://stephaneroos.com {
-    redir https://photos.stephaneroos.com permanent
-}
+# http://www.stephaneroos.com {
+#     redir https://stephaneroos.com{uri} permanent
+# }
+
+# http://stephaneroos.com {
+#     redir https://photos.stephaneroos.com permanent
+# }
 
 # ============================================================================
 # SERVICES PERSONNELS
