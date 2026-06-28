@@ -5,11 +5,11 @@
 # ============================================================================
 
 {
-    # Email pour notifications Let's Encrypt
-    email steph@stephaneroos.com
+    # TLS is terminated at the Cloudflare edge (the cloudflared tunnel delivers
+    # HTTP to Caddy on localhost:80). Disable Caddy's auto-HTTPS entirely: no
+    # cert management, no HTTP->HTTPS redirect, no :443 listener.
+    auto_https off
 
-    # Global options
-    # auto_https est activé par défaut
     log {
         output file /var/log/caddy/access.log
         format console
