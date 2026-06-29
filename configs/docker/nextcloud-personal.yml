@@ -1,103 +1,83 @@
-version: '3.8'
-
 # ============================================================================
-# NEXTCLOUD AIO - Instance Personnelle (cloud.stephaneroos.com)
+# Nextcloud Personal — cloud.stephaneroos.com (non-AIO, dedicated stack)
 # ============================================================================
-# Instance fraîche séparée de cloud.anthemion.dev
-# Domaine: cloud.stephaneroos.com
-# Port interne: 8081
-# Port AIO: 11001
+# A standalone Nextcloud (official image) with its own Postgres + Redis.
+# Unlike Nextcloud AIO, this uses distinct container/volume/network names and
+# a dedicated host port, so it coexists with the AIO instance that serves
+# cloud.anthemion.dev on the same Docker host.
+#
+# Request path:  Cloudflare edge (TLS) -> cloudflared tunnel -> Caddy (host net)
+#                -> reverse_proxy localhost:11002 -> this stack.
+#
+# Deploy:
+#   cd /home/steph/homelab/configs/docker
+#   docker compose --env-file nextcloud-personal.env -f nextcloud-personal.yml up -d
 # ============================================================================
 
 services:
-  nextcloud-personal-mastercontainer:
-    image: nextcloud/all-in-one:latest
-    container_name: nextcloud-personal-mastercontainer
+  nextcloud-personal-db:
+    image: postgres:16-alpine
+    container_name: nextcloud-personal-db
     restart: unless-stopped
-    hostname: nextcloud-personal-mastercontainer
-
-    # Ports - Accès local uniquement (Cloudflare Tunnel pour l'externe)
-    ports:
-      - "127.0.0.1:11001:11000"  # Port interne pour l'interface AIO
-      - "127.0.0.1:8081:8080"    # Port pour Nextcloud
-
-    # Volumes
     volumes:
-      # Volume de configuration AIO (séparé de l'instance existante)
-      - nextcloud_personal_aio_mastercontainer:/mnt/docker-aio-config
-
-      # Socket Docker (en lecture seule pour la sécurité)
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-
-      # Données Nextcloud sur le NAS (séparé de l'autre instance)
-      - /mnt/nas/nextcloud-personal:/mnt/ncdata
-
-    # Variables d'environnement
+      - nextcloud_personal_db:/var/lib/postgresql/data
     environment:
-      - APACHE_PORT=11000
-      - APACHE_IP_BINDING=0.0.0.0
-      - SKIP_DOMAIN_VALIDATION=true
-      - NEXTCLOUD_DATADIR=/mnt/ncdata
+      - POSTGRES_DB=nextcloud
+      - POSTGRES_USER=nextcloud
+      - POSTGRES_PASSWORD=${NEXTCLOUD_DB_PASSWORD}
+    networks:
+      - nextcloud-personal-net
+
+  nextcloud-personal-redis:
+    image: redis:7-alpine
+    container_name: nextcloud-personal-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${NEXTCLOUD_REDIS_PASSWORD}
+    networks:
+      - nextcloud-personal-net
+
+  nextcloud-personal:
+    image: nextcloud:30-apache
+    container_name: nextcloud-personal
+    restart: unless-stopped
+    depends_on:
+      - nextcloud-personal-db
+      - nextcloud-personal-redis
+    # Loopback-only host port; Caddy (host network) reaches it via localhost.
+    ports:
+      - "127.0.0.1:11002:80"
+    volumes:
+      - nextcloud_personal_app:/var/www/html
+      # User data lives on the NAS (kept out of the app volume for backups).
+      - /mnt/nas/nextcloud-personal:/var/www/html/data
+    environment:
+      # Database
+      - POSTGRES_HOST=nextcloud-personal-db
+      - POSTGRES_DB=nextcloud
+      - POSTGRES_USER=nextcloud
+      - POSTGRES_PASSWORD=${NEXTCLOUD_DB_PASSWORD}
+      # Cache
+      - REDIS_HOST=nextcloud-personal-redis
+      - REDIS_HOST_PASSWORD=${NEXTCLOUD_REDIS_PASSWORD}
+      # First-run admin account (ignored once installed)
+      - NEXTCLOUD_ADMIN_USER=${NEXTCLOUD_ADMIN_USER}
+      - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD}
+      # Reverse-proxy / edge-TLS settings
+      - NEXTCLOUD_TRUSTED_DOMAINS=cloud.stephaneroos.com localhost
       - OVERWRITEHOST=cloud.stephaneroos.com
-      - OVERWRITECLIURL=https://cloud.stephaneroos.com
       - OVERWRITEPROTOCOL=https
-      - TRUSTED_PROXIES=172.16.0.0/12,10.0.0.0/8,192.168.0.0/16
+      - OVERWRITECLIURL=https://cloud.stephaneroos.com
+      - TRUSTED_PROXIES=127.0.0.1/32 ::1/128 172.16.0.0/12 192.168.0.0/16
       - TZ=Europe/Paris
-
-    # Limites de ressources
-    deploy:
-      resources:
-        limits:
-          memory: 4G
-          cpus: '2.0'
-        reservations:
-          memory: 1G
-
-    # Options de sécurité
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
-    cap_add:
-      - CHOWN
-      - SETGID
-      - SETUID
-      - DAC_OVERRIDE
+    networks:
+      - nextcloud-personal-net
 
 volumes:
-  nextcloud_personal_aio_mastercontainer:
-    driver: local
-    name: nextcloud_personal_aio_mastercontainer
+  nextcloud_personal_db:
+    name: nextcloud_personal_db
+  nextcloud_personal_app:
+    name: nextcloud_personal_app
 
-# ============================================================================
-# CLOUDFLARE TUNNEL CONFIGURATION
-# ============================================================================
-# Ajouter à votre config cloudflared:
-#
-# ingress:
-#   - hostname: cloud.stephaneroos.com
-#     service: http://localhost:8081
-#
-# Ou via commande:
-# cloudflared tunnel route dns <tunnel-id> cloud.stephaneroos.com
-# cloudflared tunnel ingress add-rule --hostname cloud.stephaneroos.com --service http://localhost:8081
-
-# ============================================================================
-# COMMANDES UTILES
-# ============================================================================
-#
-# # Démarrer
-# docker-compose -f nextcloud-personal.yml up -d
-#
-# # Arrêter
-# docker-compose -f nextcloud-personal.yml down
-#
-# # Voir les logs
-# docker logs -f nextcloud-personal-mastercontainer
-#
-# # Interface AIO (première configuration)
-# http://localhost:11001
-#
-# # Accès Nextcloud
-# https://cloud.stephaneroos.com
-# ============================================================================
+networks:
+  nextcloud-personal-net:
+    name: nextcloud-personal-net
