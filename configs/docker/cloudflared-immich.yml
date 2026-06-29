@@ -1,0 +1,25 @@
+# ============================================================================
+# Cloudflare Tunnel Configuration for Immich
+# ============================================================================
+#
+# Configuration du tunnel pour photos.stephaneroos.com → Immich (port 2284)
+#
+# PRÉREQUIS:
+# 1. Créer un tunnel sur Cloudflare : https://dash.cloudflare.com/ -> Access -> Tunnels
+# 2. Télécharger le cert.pem et le placer dans ~/.cloudflared/
+# 3. Mettre à jour tunnel-id avec l'ID du tunnel créé
+#
+# ============================================================================
+
+tunnel: <TUNNEL_ID>
+credentials-file: /home/steph/.cloudflared/<TUNNEL_ID>.json
+
+ingress:
+  # Route Immich Web
+  - hostname: photos.stephaneroos.com
+    service: http://localhost:2284
+  # Route Immich API (optionnel - via même host)
+  - hostname: api-photos.stephaneroos.com
+    service: http://localhost:2283
+  # Fallback
+  - service: http_status:404

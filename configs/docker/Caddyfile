@@ -36,9 +36,9 @@
 # SERVICES PERSONNELS
 # ============================================================================
 
-# Photos (Immich, immich-web published on host :2284)
+# Photos (Immich v2.7.5 - merged server+web on host :2283)
 http://photos.stephaneroos.com {
-    reverse_proxy localhost:2284 {
+    reverse_proxy localhost:2283 {
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote}
     }
