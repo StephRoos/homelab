@@ -1,0 +1,24 @@
+# ============================================================================
+# Cloudflare Tunnel Service for Immich
+# ============================================================================
+#
+# Service systemd pour maintenir le tunnel actif
+# Installer dans /etc/systemd/system/cloudflared-immich.service
+#
+# ============================================================================
+
+[Unit]
+Description=Cloudflare Tunnel for Immich
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=steph
+Group=steph
+ExecStart=/usr/local/bin/cloudflared tunnel --config /home/steph/homelab/configs/docker/cloudflared-immich.yml run
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

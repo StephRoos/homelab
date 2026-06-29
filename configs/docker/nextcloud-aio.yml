@@ -1,0 +1,109 @@
+version: '3.8'
+
+# Nextcloud All-In-One (AIO) - Configuration pour le Homelab
+# Dernière mise à jour : 24 juin 2026
+# Documentation : https://github.com/nextcloud/all-in-one
+
+services:
+  nextcloud-aio-mastercontainer:
+    image: nextcloud/all-in-one:latest
+    container_name: nextcloud-aio-mastercontainer
+    restart: unless-stopped
+    hostname: nextcloud-aio-mastercontainer
+    
+    # Ports - Accès local uniquement (Cloudflare Tunnel pour l'externe)
+    ports:
+      - "127.0.0.1:11000:11000"  # Port interne pour l'interface AIO
+      - "127.0.0.1:8080:8080"    # Port pour Nextcloud
+    
+    # Volumes
+    volumes:
+      # Volume de configuration AIO
+      - nextcloud_aio_mastercontainer:/mnt/docker-aio-config
+      
+      # Socket Docker (en lecture seule pour la sécurité)
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      
+      # Données Nextcloud sur le NAS
+      - /mnt/nas/nextcloud/data:/mnt/nas/nextcloud/data
+    
+    # Variables d'environnement
+    environment:
+      - APACHE_PORT=11000
+      - APACHE_IP_BINDING=0.0.0.0
+      - SKIP_DOMAIN_VALIDATION=true  # Pour usage local/Cloudflare Tunnel
+      - NEXTCLOUD_DATADIR=/mnt/nas/nextcloud/data
+      - OVERWRITEHOST=true
+      - OVERWRITECLIURL=http://localhost:8080
+      - OVERWRITEPROTOCOL=https
+      - TRUSTED_PROXIES=172.16.0.0/12,10.0.0.0/8,192.168.0.0/16
+    
+    # Limites de ressources
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 1G
+    
+    # Options de sécurité
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - DAC_OVERRIDE
+
+volumes:
+  nextcloud_aio_mastercontainer:
+    driver: local
+    name: nextcloud_aio_mastercontainer
+
+# ============================================================================
+# CONFIGURATION CLOUDFLARE TUNNEL
+# ============================================================================
+# Pour exposer Nextcloud via Cloudflare Tunnel, ajoute cette route :
+# 
+# cloudflared tunnel route docker nextcloud-aio 8080
+#
+# Cela permettra d'accéder à Nextcloud via : cloud.tondomain.com
+
+# ============================================================================
+# COMMANDES UTILES
+# ============================================================================
+# 
+# # Démarrer/Arrêter
+# docker-compose -f nextcloud-aio.yml up -d
+# docker-compose -f nextcloud-aio.yml down
+#
+# # Voir les logs
+# docker-compose -f nextcloud-aio.yml logs -f
+# docker logs -f nextcloud-aio-mastercontainer
+#
+# # Mettre à jour
+# docker-compose -f nextcloud-aio.yml pull
+# docker-compose -f nextcloud-aio.yml up -d
+#
+# # Vérifier l'état
+# docker ps | grep nextcloud
+# docker inspect nextcloud-aio-mastercontainer
+#
+# # Sauvegarder
+# docker exec nextcloud-aio-mastercontainer /backup.sh
+#
+# ============================================================================
+# NOTES
+# ============================================================================
+# 
+# 1. L'interface AIO est accessible sur : http://192.168.129.10:11000
+# 2. Nextcloud sera accessible sur : http://192.168.129.10:8080
+#    ou via Cloudflare Tunnel : https://cloud.tondomain.com
+# 3. Les données sont stockées sur le NAS : /mnt/nas/nextcloud/data
+# 4. Pour la première configuration, suis les instructions sur :
+#    http://192.168.129.10:11000
+# 5. Le mot de passe par défaut pour l'interface AIO est généré automatiquement
+#    et affiché dans les logs au premier démarrage.

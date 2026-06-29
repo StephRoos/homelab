@@ -1,0 +1,103 @@
+version: '3.8'
+
+# ============================================================================
+# NEXTCLOUD AIO - Instance Personnelle (cloud.stephaneroos.com)
+# ============================================================================
+# Instance fraîche séparée de cloud.anthemion.dev
+# Domaine: cloud.stephaneroos.com
+# Port interne: 8081
+# Port AIO: 11001
+# ============================================================================
+
+services:
+  nextcloud-personal-mastercontainer:
+    image: nextcloud/all-in-one:latest
+    container_name: nextcloud-personal-mastercontainer
+    restart: unless-stopped
+    hostname: nextcloud-personal-mastercontainer
+
+    # Ports - Accès local uniquement (Cloudflare Tunnel pour l'externe)
+    ports:
+      - "127.0.0.1:11001:11000"  # Port interne pour l'interface AIO
+      - "127.0.0.1:8081:8080"    # Port pour Nextcloud
+
+    # Volumes
+    volumes:
+      # Volume de configuration AIO (séparé de l'instance existante)
+      - nextcloud_personal_aio_mastercontainer:/mnt/docker-aio-config
+
+      # Socket Docker (en lecture seule pour la sécurité)
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+      # Données Nextcloud sur le NAS (séparé de l'autre instance)
+      - /mnt/nas/nextcloud-personal:/mnt/ncdata
+
+    # Variables d'environnement
+    environment:
+      - APACHE_PORT=11000
+      - APACHE_IP_BINDING=0.0.0.0
+      - SKIP_DOMAIN_VALIDATION=true
+      - NEXTCLOUD_DATADIR=/mnt/ncdata
+      - OVERWRITEHOST=cloud.stephaneroos.com
+      - OVERWRITECLIURL=https://cloud.stephaneroos.com
+      - OVERWRITEPROTOCOL=https
+      - TRUSTED_PROXIES=172.16.0.0/12,10.0.0.0/8,192.168.0.0/16
+      - TZ=Europe/Paris
+
+    # Limites de ressources
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 1G
+
+    # Options de sécurité
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - DAC_OVERRIDE
+
+volumes:
+  nextcloud_personal_aio_mastercontainer:
+    driver: local
+    name: nextcloud_personal_aio_mastercontainer
+
+# ============================================================================
+# CLOUDFLARE TUNNEL CONFIGURATION
+# ============================================================================
+# Ajouter à votre config cloudflared:
+#
+# ingress:
+#   - hostname: cloud.stephaneroos.com
+#     service: http://localhost:8081
+#
+# Ou via commande:
+# cloudflared tunnel route dns <tunnel-id> cloud.stephaneroos.com
+# cloudflared tunnel ingress add-rule --hostname cloud.stephaneroos.com --service http://localhost:8081
+
+# ============================================================================
+# COMMANDES UTILES
+# ============================================================================
+#
+# # Démarrer
+# docker-compose -f nextcloud-personal.yml up -d
+#
+# # Arrêter
+# docker-compose -f nextcloud-personal.yml down
+#
+# # Voir les logs
+# docker logs -f nextcloud-personal-mastercontainer
+#
+# # Interface AIO (première configuration)
+# http://localhost:11001
+#
+# # Accès Nextcloud
+# https://cloud.stephaneroos.com
+# ============================================================================

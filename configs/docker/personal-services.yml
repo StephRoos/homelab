@@ -1,0 +1,44 @@
+version: '3.8'
+
+# ============================================================================
+# PERSONAL SERVICES - stephaneroos.com via Traefik
+# ============================================================================
+
+services:
+  # ============================================================================
+  # Nextcloud Personal
+  # ============================================================================
+  cloud-stephaneroos-proxy:
+    image: nginx:alpine
+    container_name: cloud-stephaneroos-proxy
+    restart: unless-stopped
+
+    volumes:
+      - ./nginx-proxy.conf:/etc/nginx/nginx.conf:ro
+
+    environment:
+      - NGINX_PROXY=host.docker.internal:8081
+
+    # Labels Traefik pour routing
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.cloud-http.entryPoints=http
+      - traefik.http.routers.cloud-http.rule=Host(`cloud.stephaneroos.com`)
+      - traefik.http.routers.cloud-http.middlewares=redirect-to-https
+      - traefik.http.routers.cloud-https.entryPoints=https
+      - traefik.http.routers.cloud-https.rule=Host(`cloud.stephaneroos.com`)
+      - traefik.http.routers.cloud-https.tls=true
+      - traefik.http.routers.cloud-https.tls.certresolver=letsencrypt
+      - traefik.http.routers.cloud-https.middlewares=gzip
+      - traefik.http.services.cloud.loadbalancer.server.port=80
+
+    networks:
+      - homelab-network
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  homelab-network:
+    name: homelab-network
+    external: true

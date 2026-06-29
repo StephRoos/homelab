@@ -1,0 +1,157 @@
+version: '3.8'
+
+# Uptime Kuma - Configuration pour le Homelab
+# Dernière mise à jour : 24 juin 2026
+# Documentation : https://github.com/louislam/uptime-kuma
+
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: unless-stopped
+    hostname: uptime-kuma
+    
+    # Ports - Accès local uniquement (Cloudflare Tunnel pour l'externe)
+    ports:
+      - "127.0.0.1:3001:3001"  # Port principal
+    
+    # Volumes
+    volumes:
+      # Données d'Uptime Kuma sur le NAS
+      - /mnt/nas/appdata/uptime-kuma:/app/data
+      
+      # Fichier de configuration des notifications (optionnel)
+      - /mnt/nas/appdata/uptime-kuma/notifications:/app/notifications
+    
+    # Variables d'environnement
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Brussels
+    
+    # Limites de ressources
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+    
+    # Options de sécurité
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+
+# ============================================================================
+# CONFIGURATION CLOUDFLARE TUNNEL
+# ============================================================================
+# Pour exposer Uptime Kuma via Cloudflare Tunnel, ajoute cette route :
+# 
+# cloudflared tunnel route docker uptime-kuma 3001
+#
+# Cela permettra d'accéder à Uptime Kuma via : https://status.tondomain.com
+
+# ============================================================================
+# COMMANDES UTILES
+# ============================================================================
+#
+# # Démarrer/Arrêter
+# docker-compose -f uptime-kuma.yml up -d
+# docker-compose -f uptime-kuma.yml down
+#
+# # Voir les logs
+# docker-compose -f uptime-kuma.yml logs -f
+# docker logs -f uptime-kuma
+#
+# # Mettre à jour
+# docker-compose -f uptime-kuma.yml pull
+# docker-compose -f uptime-kuma.yml up -d
+#
+# # Vérifier l'état
+# docker ps | grep uptime-kuma
+# docker inspect uptime-kuma
+#
+# # Accéder à l'interface
+# # URL locale : http://192.168.129.10:3001
+# # URL externe : https://status.tondomain.com
+#
+# ============================================================================
+# CONFIGURATION DE BASE
+# ============================================================================
+#
+# Après le premier démarrage :
+# 1. Accède à http://192.168.129.10:3001
+# 2. Configure les moniteurs pour tes services :
+#    - http://192.168.129.10:8000 (Coolify)
+#    - http://192.168.129.10:8080 (Nextcloud)
+#    - http://192.168.129.10:11000 (Nextcloud AIO)
+#    - https://coolify.tondomain.com
+#    - https://cloud.tondomain.com
+#    - https://status.tondomain.com (lui-même)
+#
+# 3. Configure les notifications (email, Telegram, Discord, etc.)
+#    dans Settings > Notifications
+#
+# ============================================================================
+# EXEMPLE DE CONFIGURATION AVANCÉE
+# ============================================================================
+#
+# Pour monitorer des services spécifiques avec des headers :
+# 1. Va dans "Add New Monitor"
+# 2. Sélectionne "HTTP(s)"
+# 3. Configure :
+#    - URL : https://ton-service.com
+#    - Method : GET
+#    - Headers :
+#      Authorization: Bearer ton-token
+#    - Body : (laisser vide)
+#    - Check Frequency : 60 (secondes)
+#    - Retry Count : 3
+#    - Timeout : 10 (secondes)
+#    - Upside Down : false (sauf si tu veux inverser le statut)
+#
+# ============================================================================
+# SAUVEGARDE
+# ============================================================================
+#
+# Les données sont automatiquement sauvegardées dans :
+# /mnt/nas/appdata/uptime-kuma
+#
+# Pour faire une sauvegarde manuelle :
+# tar -czvf /mnt/nas/backups/uptime-kuma-$(date +%Y%m%d).tar.gz /mnt/nas/appdata/uptime-kuma
+#
+# Pour restaurer :
+# docker-compose -f uptime-kuma.yml down
+# tar -xzvf /mnt/nas/backups/uptime-kuma-20260624.tar.gz -C /
+# docker-compose -f uptime-kuma.yml up -d
+#
+# ============================================================================
+# ASTUCES
+# ============================================================================
+#
+# 1. Pour monitorer un port TCP (pas HTTP) :
+#    - Utilise "TCP Port" au lieu de "HTTP(s)"
+#    - Spécifie l'IP et le port
+#
+# 2. Pour monitorer un service Docker spécifique :
+#    - Ajoute un moniteur "Docker Container"
+#    - Spécifie le nom du conteneur
+#
+# 3. Pour recevoir des alertes par Telegram :
+#    - Va dans Settings > Notifications
+#    - Ajoute un nouveau canal Telegram
+#    - Configure le bot et le chat ID
+#
+# 4. Pour configurer des checks avancés :
+#    - Utilise "Multi Step Check"
+#    - Tu peux enchaîner plusieurs requêtes
+#
+# 5. Pour monitorer un service derrière authentification :
+#    - Utilise "HTTP(s)" avec les bons headers
+#    - Ou configure un "Transaction Check"

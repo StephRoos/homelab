@@ -1,0 +1,218 @@
+# Fail2Ban Configuration pour le Homelab
+# Dernière mise à jour : 24 juin 2026
+# Serveur : UM880 Plus (Ubuntu 24.04.4 LTS)
+# Fichier : /etc/fail2ban/jail.local
+
+[DEFAULT]
+# Paramètres par défaut pour toutes les jails
+
+# Temps de ban (en secondes)
+bantime = 3600  # 1 heure
+
+# Temps maximum entre les tentatives (en secondes)
+findtime = 600  # 10 minutes
+
+# Nombre maximal de tentatives avant ban
+maxretry = 5
+
+# Ignorer les IPs du réseau local
+ignoreip = 127.0.0.1/8 ::1 192.168.129.0/24
+
+# Destination pour les notifications (optionnel)
+destemail = stephane@tonemail.com
+sender = fail2ban@homelab.local
+
+# Action par défaut (ban + notification)
+action = %(action_)s
+       mwl
+
+# ============================================================================
+# JAILS SPÉCIFIQUES
+# ============================================================================
+
+[sshd]
+# Protection SSH - Activée par défaut
+enabled = true
+port = ssh
+filter = sshd
+logpath = %(sshd_log)s
+maxretry = 5
+bantime = 3600
+findtime = 600
+
+[sshd-ddos]
+# Protection contre les attaques DDoS sur SSH
+enabled = true
+port = ssh
+filter = sshd-ddos
+logpath = %(sshd_log)s
+maxretry = 10
+bantime = 600
+findtime = 60
+
+# ============================================================================
+# PROTECTION POUR LES SERVICES WEB (si exposés directement)
+# Note : Ces services sont normalement protégés par Cloudflare Tunnel.
+#       Active ces jails seulement si tu exposes des ports directement.
+# ============================================================================
+
+[nginx-http-auth]
+# Protection pour Nginx (si utilisé)
+enabled = false  # Désactivé par défaut (Cloudflare Tunnel utilisé)
+port = http,https
+filter = nginx-http-auth
+logpath = /var/log/nginx/error.log
+maxretry = 3
+bantime = 600
+
+[apache-auth]
+# Protection pour Apache (si utilisé)
+enabled = false
+port = http,https
+filter = apache-auth
+logpath = /var/log/apache2/error.log
+maxretry = 3
+
+[apache-badbots]
+# Bloquer les mauvais bots
+enabled = false
+port = http,https
+filter = apache-badbots
+logpath = /var/log/apache2/access.log
+maxretry = 2
+bantime = 86400  # 24 heures
+
+# ============================================================================
+# PROTECTION POUR LES SERVICES DOCKER
+# ============================================================================
+
+[docker-sshd]
+# Protection SSH pour les conteneurs Docker (si applicable)
+enabled = false
+port = 2222  # Port SSH alternatif pour Docker
+type = http
+filter = sshd
+logpath = /var/log/docker/containers/*/*-json.log
+maxretry = 3
+
+# ============================================================================
+# PROTECTION POUR LES SERVICES COOLIFY/ NEXTCLOUD
+# ============================================================================
+
+[coolify]
+# Protection pour Coolify (port 8000)
+enabled = false  # Désactivé (Cloudflare Tunnel utilisé)
+port = 8000
+type = http
+filter = coolify
+logpath = /var/log/coolify/access.log
+maxretry = 5
+bantime = 3600
+
+[nextcloud]
+# Protection pour Nextcloud (port 8080, 11000)
+enabled = false  # Désactivé (Cloudflare Tunnel utilisé)
+port = 8080,11000
+type = http
+filter = nextcloud
+logpath = /var/log/nextcloud/access.log
+maxretry = 5
+bantime = 3600
+
+# ============================================================================
+# PROTECTION POUR LES SERVICES DE MONITORING
+# ============================================================================
+
+[uptime-kuma]
+# Protection pour Uptime Kuma (port 3001)
+enabled = false  # Désactivé (Cloudflare Tunnel utilisé)
+port = 3001
+type = http
+filter = uptime-kuma
+logpath = /mnt/nas/appdata/uptime-kuma/logs/access.log
+maxretry = 5
+
+# ============================================================================
+# ACTIONS PERSONNALISÉES
+# ============================================================================
+
+[Definition]
+# Définition des actions personnalisées
+
+# Action pour bloquer avec UFW
+actionban = ufw
+       name = ufw
+       port = ssh
+       protocol = tcp
+       chain = ufw-user-input
+
+# Action pour envoyer un email
+actionmwl = 
+       name = mwl
+       dest = stephane@tonemail.com
+       sender = fail2ban@homelab.local
+       mwl = true
+
+# ============================================================================
+# COMMANDES UTILES
+# ============================================================================
+
+# Vérifier le statut de Fail2Ban
+fail2ban-client status
+
+# Vérifier le statut d'une jail spécifique
+fail2ban-client status sshd
+
+# Voir les IPs bannies pour une jail
+fail2ban-client status sshd | grep "Banned IP"
+
+# Débannir une IP pour une jail
+fail2ban-client set sshd unbanip 1.2.3.4
+
+# Recharger la configuration
+fail2ban-client reload
+
+# Redémarrer Fail2Ban
+sudo systemctl restart fail2ban
+
+# Voir les logs Fail2Ban
+sudo tail -f /var/log/fail2ban.log
+
+# ============================================================================
+# BONNES PRATIQUES
+# ============================================================================
+
+# 1. Tester la configuration après modification :
+#    fail2ban-client -t
+
+# 2. Vérifier que Fail2Ban fonctionne :
+#    fail2ban-client status
+
+# 3. Pour ajouter une nouvelle jail :
+#    - Crée un filtre dans /etc/fail2ban/filter.d/
+#    - Ajoute la configuration dans ce fichier
+#    - Recharge Fail2Ban : fail2ban-client reload
+
+# 4. Sauvegarder la configuration :
+#    cp /etc/fail2ban/jail.local /Users/stephane/Projects/homelab/configs/system/fail2ban-jail.local
+
+# 5. Pour les services exposés sur internet :
+#    - Utilise TOUJOURS Cloudflare Tunnel si possible
+#    - Si tu dois exposer un port, active Fail2Ban pour ce service
+#    - Configure des alertes pour les IPs bannies
+
+# ============================================================================
+# RÉFÉRENCES
+# ============================================================================
+
+# Documentation officielle Fail2Ban :
+# https://www.fail2ban.org/wiki/index.php/Main_Page
+
+# Configuration par défaut :
+# /etc/fail2ban/jail.conf (ne pas modifier directement)
+
+# Filtres par défaut :
+# /etc/fail2ban/filter.d/
+
+# Actions par défaut :
+# /etc/fail2ban/action.d/

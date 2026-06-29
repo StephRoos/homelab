@@ -1,0 +1,29 @@
+{
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  },
+  "default-address-pools": [
+    {
+      "base": "10.0.0.0/8",
+      "size": 24
+    }
+  ],
+  "ip": "127.0.0.1",
+  "iptables": true,
+  "ip-masq": true,
+  "userland-proxy": false,
+  "no-new-privileges": true,
+  "live-restore": true,
+  "default-ulimits": {
+    "nofile": {
+      "Name": "nofile",
+      "Hard": 65536,
+      "Soft": 65536
+    }
+  },
+  "features": {
+    "buildkit": true
+  }
+}

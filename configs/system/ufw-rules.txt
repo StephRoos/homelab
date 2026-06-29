@@ -1,0 +1,146 @@
+# Règles UFW pour le Homelab
+# Dernière mise à jour : 24 juin 2026
+# Serveur : UM880 Plus (Ubuntu 24.04.4 LTS)
+
+# ============================================================================
+# RÈGLES DE BASE (À appliquer en premier)
+# ============================================================================
+
+# Désactiver toutes les connexions entrantes par défaut
+ufw default deny incoming
+
+# Autoriser toutes les connexions sortantes
+ufw default allow outgoing
+
+# ============================================================================
+# RÈGLES POUR LES SERVICES LOCAUX (LAN)
+# ============================================================================
+
+# SSH - Accès sécurisé depuis le LAN (obligatoire pour l'administration)
+ufw allow from 192.168.129.0/24 to any port 22 proto tcp
+
+# ============================================================================
+# RÈGLES POUR LES SERVICES EXTERNES (via Cloudflare Tunnel)
+# Note : Cloudflare Tunnel ne nécessite PAS d'ouvrir des ports sur l'hôte
+#        car tout le trafic passe par le tunnel chiffré.
+#        Cependant, si tu veux un accès direct (non recommandé), décommente :
+# ============================================================================
+
+# Coolify (port 8000) - Géré par Cloudflare Tunnel
+# ufw allow 8000/tcp
+
+# Nextcloud (port 8080, 11000) - Géré par Cloudflare Tunnel
+# ufw allow 8080/tcp
+# ufw allow 11000/tcp
+
+# Uptime Kuma (port 3001) - Géré par Cloudflare Tunnel
+# ufw allow 3001/tcp
+
+# ============================================================================
+# RÈGLES POUR LES SERVICES INTERNES (accès local uniquement)
+# ============================================================================
+
+# Cockpit (port 9090) - Administration web du serveur
+ufw allow from 192.168.129.0/24 to any port 9090 proto tcp
+
+# Netdata (port 19999) - Monitoring en temps réel
+ufw allow from 192.168.129.0/24 to any port 19999 proto tcp
+
+# ============================================================================
+# RÈGLES POUR LES SERVICES DOCKER (si accès direct nécessaire)
+# ============================================================================
+
+# Portainer (port 9443) - Gestion Docker (accès local uniquement)
+ufw allow from 192.168.129.0/24 to any port 9443 proto tcp
+
+# ============================================================================
+# RÈGLES ICMP (Ping)
+# ============================================================================
+
+# Autoriser le ping depuis le LAN
+ufw allow in from 192.168.129.0/24 to any proto icmp
+
+# ============================================================================
+# ACTIVATION DES RÈGLES
+# ============================================================================
+
+# Activer UFW (à faire après avoir ajouté toutes les règles)
+ufw enable
+
+# Vérifier le statut
+ufw status verbose
+
+# ============================================================================
+# COMMANDES UTILES
+# ============================================================================
+
+# Voir le statut complet
+ufw status verbose
+
+# Voir les règles numérotées (pour suppression)
+ufw status numbered
+
+# Ajouter une règle
+ufw allow <port>/<proto>
+ufw allow from <ip> to any port <port> proto <proto>
+
+# Supprimer une règle (par numéro)
+ufw delete <numéro>
+
+# Supprimer une règle (par spécification)
+ufw delete allow <port>/<proto>
+
+# Recharger UFW
+ufw reload
+
+# Désactiver UFW (temporairement)
+ufw disable
+
+# Réactiver UFW
+ufw enable
+
+# ============================================================================
+# BONNES PRATIQUES
+# ============================================================================
+
+# 1. Toujours tester les règles avant de les activer
+#    - Vérifie que tu peux toujours te connecter en SSH
+#    - Utilise une deuxième session SSH ou console locale
+
+# 2. Pour ajouter un nouveau service :
+#    - Ajoute d'abord la règle UFW
+#    - Teste le service
+#    - Si ça ne fonctionne pas, vérifie avec :
+#      sudo ufw status numbered
+#      sudo iptables -L -n -v
+
+# 3. Pour les services exposés sur internet :
+#    - Préfère TOUJOURS Cloudflare Tunnel plutôt que d'ouvrir des ports
+#    - Si tu dois ouvrir un port, utilise Fail2Ban pour le protéger
+
+# 4. Sauvegarder la configuration UFW :
+#    La configuration est automatiquement sauvegardée dans /etc/ufw/
+
+# ============================================================================
+# RÈGLES FAIL2BAN COMPLÉMENTAIRES
+# ============================================================================
+
+# Fail2Ban protège automatiquement SSH avec la configuration par défaut.
+# Pour protéger d'autres services, crée des jails spécifiques dans :
+# /etc/fail2ban/jail.local
+
+# Exemple pour protéger le port 8000 (Coolify) :
+#[coolify]
+enabled = true
+port = 8000
+type = http
+action = ufw[application=coolify]
+maxretry = 5
+bantime = 1h
+findtime = 10m
+
+# Voir les IPs bannies :
+# fail2ban-client status sshd
+
+# Débannir une IP :
+# fail2ban-client set sshd unbanip <IP>

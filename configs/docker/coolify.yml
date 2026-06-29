@@ -1,0 +1,233 @@
+version: '3.8'
+
+# Coolify - Configuration pour le Homelab
+# Dernière mise à jour : 24 juin 2026
+# Documentation : https://coolify.io/docs
+
+services:
+  coolify:
+    image: coollabsio/coolify:latest
+    container_name: coolify
+    restart: unless-stopped
+    hostname: coolify
+    
+    # Ports - Accès local uniquement (Cloudflare Tunnel pour l'externe)
+    ports:
+      - "127.0.0.1:8000:8000"  # Port principal de Coolify
+    
+    # Volumes
+    volumes:
+      # Données de Coolify sur le NAS
+      - /mnt/nas/appdata/coolify:/var/lib/coolify
+      
+      # Socket Docker (en lecture-écriture pour la gestion des conteneurs)
+      - /var/run/docker.sock:/var/run/docker.sock
+      
+      # Pour le build des applications
+      - /tmp/coolify:/tmp/coolify
+    
+    # Variables d'environnement
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://coolify:coolify@coolify-db:5432/coolify
+      - REDIS_URL=redis://coolify-redis:6379
+      - S3_ENDPOINT=minio
+      - S3_PORT=9000
+      - S3_ACCESS_KEY=minioadmin
+      - S3_SECRET_KEY=minioadmin
+      - S3_BUCKET=coolify
+      - S3_SSL=false
+      - STORAGE_DRIVER=s3
+      - ENABLE_ANALYTICS=false
+      - ENABLE_PUBLIC_REGISTRATION=false
+      - SERVER_WEBHOOK_SECRET=super-secret-webhook-key  # À changer !
+    
+    # Limites de ressources
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+    
+    # Réseau
+    networks:
+      - coolify-network
+    
+    # Options de sécurité
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - DAC_OVERRIDE
+
+  # Base de données PostgreSQL pour Coolify
+  coolify-db:
+    image: postgres:15-alpine
+    container_name: coolify-db
+    restart: unless-stopped
+    hostname: coolify-db
+    
+    volumes:
+      - /mnt/nas/appdata/coolify/db:/var/lib/postgresql/data
+    
+    environment:
+      - POSTGRES_USER=coolify
+      - POSTGRES_PASSWORD=coolify
+      - POSTGRES_DB=coolify
+    
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+    
+    networks:
+      - coolify-network
+    
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  # Redis pour Coolify
+  coolify-redis:
+    image: redis:7-alpine
+    container_name: coolify-redis
+    restart: unless-stopped
+    hostname: coolify-redis
+    
+    volumes:
+      - /mnt/nas/appdata/coolify/redis:/data
+    
+    command: redis-server --appendonly yes --requirepass coolify
+    
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
+    
+    networks:
+      - coolify-network
+    
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  # MinIO pour le stockage S3 (optionnel)
+  coolify-minio:
+    image: minio/minio:latest
+    container_name: coolify-minio
+    restart: unless-stopped
+    hostname: coolify-minio
+    
+    ports:
+      - "127.0.0.1:9000:9000"
+    
+    volumes:
+      - /mnt/nas/appdata/coolify/minio:/data
+    
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    
+    command: server /data --console-address :9000
+    
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+    
+    networks:
+      - coolify-network
+    
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+# Réseau dédié pour Coolify
+networks:
+  coolify-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.10.0/24
+          gateway: 10.0.10.1
+
+# ============================================================================
+# CONFIGURATION CLOUDFLARE TUNNEL
+# ============================================================================
+# Pour exposer Coolify via Cloudflare Tunnel, ajoute cette route :
+# 
+# cloudflared tunnel route docker coolify 8000
+#
+# Cela permettra d'accéder à Coolify via : https://coolify.tondomain.com
+
+# ============================================================================
+# INSTALLATION ALTERNATIVE (via script officiel)
+# ============================================================================
+# Coolify peut aussi être installé via le script officiel :
+# curl -fsSL https://cdn.coollabs.io/coolify/install.sh | bash
+#
+# Ce script crée automatiquement les conteneurs nécessaires.
+
+# ============================================================================
+# COMMANDES UTILES
+# ============================================================================
+#
+# # Démarrer/Arrêter tout le stack
+# docker-compose -f coolify.yml up -d
+# docker-compose -f coolify.yml down
+#
+# # Voir les logs
+# docker-compose -f coolify.yml logs -f coolify
+# docker logs -f coolify
+#
+# # Mettre à jour
+# docker-compose -f coolify.yml pull
+# docker-compose -f coolify.yml up -d
+#
+# # Vérifier l'état
+# docker ps | grep coolify
+# docker-compose -f coolify.yml ps
+#
+# # Accéder à l'interface
+# # URL locale : http://192.168.129.10:8000
+# # URL externe : https://coolify.tondomain.com
+#
+# ============================================================================
+# NOTES IMPORTANTES
+# ============================================================================
+#
+# 1. CHANGER LES MOTS DE PASSE !
+#    - S3_SECRET_KEY dans coolify
+#    - MINIO_ROOT_PASSWORD dans coolify-minio
+#    - POSTGRES_PASSWORD dans coolify-db
+#    - SERVER_WEBHOOK_SECRET dans coolify
+#
+# 2. Pour la première connexion :
+#    - L'interface Coolify sera accessible sur : http://192.168.129.10:8000
+#    - Crée un compte administrateur
+#
+# 3. Coolify gère automatiquement :
+#    - Le déploiement des applications via Git
+#    - Les certificats SSL via Let's Encrypt
+#    - Les reverse proxies
+#    - Les mises à jour
+#
+# 4. Pour désinstaller :
+#    docker-compose -f coolify.yml down -v
+#    rm -rf /mnt/nas/appdata/coolify
+#
+# 5. Sauvegarde recommandée :
+#    /mnt/nas/appdata/coolify (volume complet)
+#    /mnt/nas/backups/coolify-$(date +%Y%m%d).tar.gz
