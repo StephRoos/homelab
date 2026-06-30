@@ -163,7 +163,7 @@ IFS='|' read -r NAS_SDA NAS_SDB NAS_SDC NAS_V1 NAS_UP <<< "$NAS_DATA"
 [ -z "$NAS_SDA" ] && [ -z "$NAS_SDB" ] && [ -z "$NAS_SDC" ] && DEGRADED=1
 
 # NAS disk temperature thresholds (Seagate ST4000VN006 rated 65°C; alerte à 55°C)
-check_temp "$NAS_SDA" 55 "NAS sda (USB NVMe)"
+check_temp "$NAS_SDA" 65 "NAS sda (USB NVMe)"
 check_temp "$NAS_SDB" 55 "NAS sdb (HDD)"
 check_temp "$NAS_SDC" 55 "NAS sdc (HDD)"
 
