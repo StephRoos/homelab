@@ -114,11 +114,15 @@ On garde toujours une 2ᵉ copie tant que la 1ʳᵉ n'est pas prouvée complète
 - **Exclusions** `thumbs/**` + `encoded-video/**` (dérivables régénérables, ~27 Go économisés). Volume backup ≈ 84 Go (`library/upload`).
 - Intégré au cron existant `/etc/cron.d/b2-backup` (04:00 quotidien, root).
 
-**État au 2026-07-07 20:54** : 1er run initial en cours, **~34 / 84 Go** montés. Vérifier la fin :
+**✅ 1er run TERMINÉ et VÉRIFIÉ (2026-07-07 21:52)** : `immich-library` sur B2 = **83,57 Go / 50 049 fichiers = IDENTIQUE à la source locale** (hors dérivables). Dump DB présent (`immich-20260707-201840.sql.gz`, 30 Mo). Log `B2 backup complete` (durée 1h33). Le cron 04:00 rejoue en incrémental chaque nuit. **SPOF fermé.**
 ```bash
-ssh homelab 'sudo rclone size b2:homelab-backup-anthemion/immich-library'   # doit approcher ~84 GiB
-ssh homelab 'sudo tail -5 /var/log/rclone-b2-backup.log'                     # chercher "B2 backup complete"
+ssh homelab 'sudo rclone size b2:homelab-backup-anthemion/immich-library'   # ≈ 83.57 GiB
+ssh homelab 'sudo tail -5 /var/log/rclone-b2-backup.log'                     # "B2 backup complete"
 ```
+
+**Auto-upload mobile Immich : ✅ CONFIRMÉ (2026-07-07)** — test photo live remonté dans Immich (+ assets 04-05/07 présents). Le relais Immich fonctionne.
+
+**Backup Google Photos (Pixel) : coupé le 2026-07-07** (réversible, non destructif). La bibliothèque Google Photos EXISTANTE reste intacte = filet de sécurité jusqu'au spot-check + décision de suppression.
 
 ## 6. CE QUI RESTE À FAIRE (ordonné)
 
