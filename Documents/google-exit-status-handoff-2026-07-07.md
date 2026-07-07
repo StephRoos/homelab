@@ -78,10 +78,14 @@ On garde toujours une 2ᵉ copie tant que la 1ʳᵉ n'est pas prouvée complète
 - **NE JAMAIS** le mettre à `steph@stephaneroos.com` (dépendance circulaire = lockout si perte d'accès).
 - Recommandation : le passer à l'adresse pro **`@anthemion.dev`** (indépendante, non-Google) OU laisser gmail comme filet.
 
-### Config Pixel 8
-- **Décision (2026-07-07)** : utiliser **l'app Infomaniak native** (Mail/kSuite) qui intègre Mail + Calendrier + Contacts. Connexion en `stephaneroos@gmail.com` (= login COMPTE, pas la boîte).
-- **NE PAS reproposer DAVx5** : testé, trop de friction sur le my kSuite gratuit (découverte des collections CalDAV/CardDAV non fluide) pour un seul compte, sans bénéfice. L'app native marche du premier coup. Compromis accepté : les contacts ne remontent pas dans le composeur d'appel système Android.
-- Note identités Infomaniak : **login/compte = `stephaneroos@gmail.com`** (propriétaire du calendrier + contacts) ; **boîte mail = `steph@stephaneroos.com`** (produit séparé, son propre mot de passe). Ne pas confondre.
+### Config Pixel 8 — état réel (2026-07-07)
+- **Mail : ✅ réglé** via l'app **Infomaniak Mail** (Android). C'est l'essentiel du besoin quotidien.
+- **Agenda + Contacts mobile : ⚠️ NON résolu, parké par choix utilisateur.** Constat honnête :
+  - Il n'existe **pas** d'app Infomaniak « kSuite » unifiée ni de calendrier/contacts dans l'app Mail.
+  - La **seule** synchro native agenda/contacts sur Android = **DAVx5** (CalDAV/CardDAV). Testé le 07/07, jugé trop peu ergonomique → **abandonné par Stéphane (déçu)**. Ne pas reproposer sans qu'il le redemande.
+  - Détail technique si repris un jour : URL `https://sync.infomaniak.com`, **user = `stephaneroos@gmail.com`** (login COMPTE, propriétaire agenda+contacts — PAS la boîte `steph@`), mot de passe du compte. L'échec observé = collections CardDAV/CalDAV non listées (bouton ⟳ « rafraîchir » + cocher le carnet ; possible bridage du my kSuite gratuit).
+- **Contours de repli** (non faits) : agenda vide → consultable sur `calendar.infomaniak.com` ; contacts pour le dialer → import du `contacts.vcf` (déjà sur NAS/Mac) dans un compte "local/de l'appareil".
+- Identités Infomaniak à ne pas confondre : **login/compte = `stephaneroos@gmail.com`** ; **boîte mail = `steph@stephaneroos.com`**.
 
 ## 4. Google Drive — ✅ RAPATRIÉ (ciblé)
 
