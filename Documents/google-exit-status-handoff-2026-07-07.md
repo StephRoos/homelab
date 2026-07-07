@@ -127,12 +127,12 @@ ssh homelab 'sudo tail -5 /var/log/rclone-b2-backup.log'                     # "
 ## 6. CE QUI RESTE À FAIRE (ordonné)
 
 1. **[bloquant] Attendre la fin + VÉRIFIER le 1er backup Immich** (§5). Confirmer `immich-library` ≈ 84 Go sur B2 et présence d'un dump dans `/mnt/nas/backups/immich-db/`.
-2. **Spot-check visuel Immich** : ouvrir années 2008 et 2016 sur `photos.stephaneroos.com`, confirmer présence des photos.
+2. ~~**Spot-check visuel Immich** 2008/2016~~ → ✅ **FAIT le 2026-07-07**. Migration photos **fonctionnellement complète**.
 3. **Config Pixel 8** : Infomaniak Mail + DAVx5 (contacts/agenda). Voir §3.
 4. **Compte Infomaniak** : changer l'email de récupération (→ `@anthemion.dev`, PAS la boîte perso). Voir §3.
 5. **Rattrapage mails 30/06→07/07** : import ponctuel Infomaniak depuis Gmail.
 6. **[destructif, seulement après 1+2 OK]** Couper le **backup Google Photos** sur le Pixel (garder l'historique en ligne d'abord). Valider le test d'auto-upload Immich en arrière-plan avant.
-7. **[destructif, très encadré, plus tard]** Supprimer la bibliothèque **Google Photos** après période de rétention. **Ne JAMAIS supprimer l'adresse Gmail** (devient boîte de transfert ; trop de comptes legacy liés).
+7. **[destructif, très encadré — EN RÉTENTION jusqu'à ~2026-08-07]** Supprimer la bibliothèque **Google Photos**. Décision (07/07) : NE PAS supprimer tout de suite malgré spot-check OK — garder Google ~1 mois comme 3ᵉ copie le temps que le nouveau setup (auto-upload Immich + backup B2 nocturne) fasse ses preuves. Coût de garder = 0 (backup déjà coupé, biblio figée) ; coût de supprimer trop tôt = irréversible. **Ne JAMAIS supprimer l'adresse Gmail** (boîte de transfert ; comptes legacy liés).
 8. **Plus tard** : migration mail **`anthemion.dev` OVH → Infomaniak** (avec récup du courrier ladtc.be).
 
 ## 7. Pièges rencontrés (mémo)
