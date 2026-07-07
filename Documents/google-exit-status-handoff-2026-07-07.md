@@ -78,9 +78,10 @@ On garde toujours une 2ᵉ copie tant que la 1ʳᵉ n'est pas prouvée complète
 - **NE JAMAIS** le mettre à `steph@stephaneroos.com` (dépendance circulaire = lockout si perte d'accès).
 - Recommandation : le passer à l'adresse pro **`@anthemion.dev`** (indépendante, non-Google) OU laisser gmail comme filet.
 
-### Config Pixel 8 — À FAIRE (utilisateur)
-- Mail : app officielle **Infomaniak Mail** (push natif).
-- Contacts + Agenda : **DAVx5** (CalDAV/CardDAV → apps natives Android). C'est l'étape non évidente.
+### Config Pixel 8
+- **Décision (2026-07-07)** : utiliser **l'app Infomaniak native** (Mail/kSuite) qui intègre Mail + Calendrier + Contacts. Connexion en `stephaneroos@gmail.com` (= login COMPTE, pas la boîte).
+- **NE PAS reproposer DAVx5** : testé, trop de friction sur le my kSuite gratuit (découverte des collections CalDAV/CardDAV non fluide) pour un seul compte, sans bénéfice. L'app native marche du premier coup. Compromis accepté : les contacts ne remontent pas dans le composeur d'appel système Android.
+- Note identités Infomaniak : **login/compte = `stephaneroos@gmail.com`** (propriétaire du calendrier + contacts) ; **boîte mail = `steph@stephaneroos.com`** (produit séparé, son propre mot de passe). Ne pas confondre.
 
 ## 4. Google Drive — ✅ RAPATRIÉ (ciblé)
 
