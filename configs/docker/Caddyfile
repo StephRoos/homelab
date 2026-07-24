@@ -58,9 +58,9 @@ http://cloud.stephaneroos.com {
 #     reverse_proxy localhost:4000
 # }
 
-# Git (Forgejo, published on host :32768)
+# Git (Forgejo, port fixe 3002)
 http://git.stephaneroos.com {
-    reverse_proxy localhost:32768 {
+    reverse_proxy localhost:3002 {
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote}
     }
