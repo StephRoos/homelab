@@ -1,0 +1,23 @@
+# ============================================================================
+# PORTFOLIO STAGING - Static site served by nginx
+# ============================================================================
+# Build output from my-portfolio (Next.js static export) served via nginx.
+# Content lives in ~/apps/portfolio-staging/public (bind mount).
+# Deployed on the coolify network, published on host port 8083.
+# Tunnel route: staging-portfolio.anthemion.dev -> localhost:8083
+---
+services:
+  portfolio-staging:
+    image: nginx:alpine
+    container_name: portfolio-staging
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8083:80"
+    volumes:
+      - /home/steph/apps/portfolio-staging/public:/usr/share/nginx/html:ro
+    networks:
+      - coolify
+
+networks:
+  coolify:
+    external: true
