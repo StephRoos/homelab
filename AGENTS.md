@@ -210,6 +210,21 @@ vibe --agent homelab-expert
 
 ---
 
+## 🧭 Méthodologie de référence (formation Audéon)
+
+> **Pour mémoire (acté 07/10/2026)** : la méthodologie de la formation Audéon s'applique à toute session de travail sur le homelab et le second cerveau.
+
+**Source de vérité** : `Second Cerveau/3 RESSOURCES/formations/formation-ia-septembre-2026/` (leçons + son `AGENTS.md`, matériau 100 % local). Lire les leçons pertinentes avant de concevoir (S1 : coffre, sécurité · S2 : cartographie, skills · S3 : n8n, NocoDB, serveur souverain · S4 : maintenance).
+
+**Invariants applicables** :
+- **Qualité = Contexte × Modèle × Outils** : tout changement d'infra évalue les 3 leviers (le serveur est l'« Outils » de l'équation)
+- **5 valeurs** : souveraineté, alignement, amplification, long terme, ultra-personnalisation
+- **Skill vs automatisation** : n'automatise que les process rodés (règle des ~50 exécutions), le déclaratif s'automatise, le qualitatif reste un skill, budgéter ~1 incident/mois par automatisation (dette technique assumée), l'agent borné comme seule exception
+- **Arbitrage serveur (S3)** : chaque nouveau service pèse dette technique + maintenance vs ROI financier et capacités ; n'auto-héberge que ce qui tourne en cloud d'abord ou qui est rodé
+- **L'échelle d'un skill** : une session de travail, un déclencheur, un livrable en sortie
+
+---
+
 ## 🔐 Bonnes Pratiques
 
 1. **Toujours vérifier** : Avant d'exécuter une commande proposée par l'agent, vérifie qu'elle est adaptée à ton environnement.
@@ -227,6 +242,7 @@ vibe --agent homelab-expert
 | Date | Agent | Modification | Statut |
 |------|-------|--------------|--------|
 | 2026-06-24 | homelab-expert | Création de la configuration | ✅ Actif |
+| 2026-10-07 | homelab-expert | Méthodologie de référence (formation Audéon) : source de vérité + invariants applicables | ✅ Actif |
 
 ---
 
